@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My experiment</title>
+    <script src="jspsych/jspsych.js"></script> <!--load library-->
+    <script src="jspsych/plugin-html-keyboard-response.js"></script> <!--plugin-html-keyoard-response.js is a plugin that allows to show text; script tag (<script smt><7script>)-->
+    <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" /> <!--jsPsych stylesheet-->
+  </head>
+  <body></body>
+  <script> //adds JavaScript code directly to wepage (opne and close!)
+    const jsPsych = initJsPsych(); //initialize jsPsych
+
+    const hello_trial = { //create an object
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: 'Hello world!' //--> message/text
+    }
+
+    jsPsych.run([hello_trial]); //run an experiment ([consisting of this])
+  </script>
+</html>
