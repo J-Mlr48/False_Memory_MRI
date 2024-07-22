@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo Exp</title>
+    <script src="jspsych/jspsych.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@jspsych/core@7.2.5/jspsych.min.js"></script>
+    <script src="jspsych/plugin-html-button-response.js"></script>
+    <script src="jspsych/plugin-html-keyboard-response.js"></script>
+    <script src="jspsych/plugin-survey-text.js"></script>
+    <script src="jspsych/plugin-preload.js"></script>
+    <script src="jspsych/plugin-survey-likert.js"></script>
+    <link href="jspsych/jspsych.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body></body>
+  <script>
+    // Define word lists
+    var man = [
+      "woman",
+      "husband",
+      "uncle",
+      "lady",
+      "mouse",
+      "male",
+      "father",
+      "strong",
+      "friend",
+      "beard",
+      "person",
+      "handsome",
+    ];
+    var spider = [
+      "web",
+      "insect",
+      "bug",
+      "fright",
+      "fly",
+      "arachnid",
+      "crawl",
+      "tarantula",
+      "poison",
+      "bite",
+      "creepy",
+      "animal",
+    ];
+    var lion = [
+      "tiger",
+      "circus",
+      "jungle",
+      "tamer",
+      "den",
+      "cub",
+      "africa",
+      "mane",
+      "cage",
+      "feline",
+      "roar",
+      "fierce",
+    ];
+    var cold = [
+      "hot",
+      "snow",
+      "warm",
+      "winter",
+      "ice",
+      "wet",
+      "frigid",
+      "chilly",
+      "heat",
+      "weather",
+      "freeze",
+      "air",
+    ];
+    var shirt = [
+      "blouse",
+      "sleeves",
+      "pants",
+      "tie",
+      "button",
+      "shorts",
+      "iron",
+      "polo",
+      "collar",
+      "vest",
+      "pocket",
+      "jersey",
+    ];
+    var black = [
+      "white",
+      "dark",
+      "cat",
+      "charred",
+      "night",
+      "funeral",
+      "color",
+      "grief",
+      "blue",
+      "death",
+      "ink",
+      "bottom",
+    ];
+    var thief = [
+      "steal",
+      "robber",
+      "crook",
+      "burglar",
+      "money",
+      "cop",
+      "bad",
+      "rob",
+      "jail",
+      "gun",
+      "villain",
+      "crime",
+    ];
+    var fruit = [
+      "apple",
+      "vegetable",
+      "orange",
+      "kiwi",
+      "citrus",
+      "ripe",
+      "pear",
+      "banana",
+      "berry",
+      "cherry",
+      "basket",
+      "juice",
+    ];
+
+    // Load the Excel file to create the randomWords list
+    function loadExcelFile(filePath, callback) {
+      fetch(filePath)
+        .then((response) => response.arrayBuffer())
+        .then((data) => {
+          var workbook = XLSX.read(data, { type: "array" });
+          var sheet = workbook.Sheets[workbook.SheetNames[0]];
+          var rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          var variables = {};
+          var listName = rows[0][0]; // First cell as the list name
+
+          rows.slice(1).forEach((row) => {
+            if (!variables[listName]) {
+              variables[listName] = [];
+            }
+            variables[listName].push(row[0]);
+          });
+
+          console.log(variables);
+
+          // Call the callback function with the loaded data
+          if (callback && typeof callback === "function") {
+            callback(variables);
+          }
+        })
+        .catch((error) =>
+          console.error("Error fetching the Excel file:", error)
+        );
+    }
+
+    function saveDataAsCSV(data, pseudonym) {
+      var folderName = "ExperimentResults";
+      var baseFilename = `DRMfMRIFalseMemoryStudy_${pseudonym}`;
+
+      // Create a unique identifier (timestamp)
+      var timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      var filename = `${baseFilename}_${timestamp}.csv`;
+
+      var blob = new Blob([data], { type: "text/csv" });
+      saveAs(blob, `${folderName}/${filename}`);
+    }
+
+    /*initialize jsPsych*/
+    const jsPsych = initJsPsych({
+      on_finish: function () {
+        jsPsych.data.displayData(); //delete before run!!
+        // Convert data to CSV format and save it locally
+        // var csvData = jsPsych.data.get().csv();
+        // saveDataAsCSV(csvData, pseud);
+      },
+    });
+
+    /* create timeline */
+    var timeline = [];
+
+    // /* preload (probably audio files) */
+    // var preload = {
+    //   type: jsPsychPreload,
+    //   images: [],
+    // };
+    // timeline.push(preload);
+
+    // Define the welcome screen
+    var welcome = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus:
+        "Welcome to the experiment. Press the Continue button to begin.",
+      choices: ["Continue"],
+      record_data: false,
+    };
+    timeline.push(welcome);
+
+    var pseudonym = {
+      type: jsPsychSurveyText,
+      questions: [
+        {
+          prompt: `
+          <p>Before the experiment begins, we will provide you with a pseudonym for this experiment.</p>
+          `,
+          required: true,
+          name: "Pseudonym",
+          preamble: `
+          <p>No action is required!</p>
+          `,
+        },
+      ],
+      on_finish: function (data) {
+        pseud = data.response.Pseudonym;
+      },
+    };
+    timeline.push(pseudonym);
+
+    var instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+            <p>In the first part of this experiment you will be shown a series of words.<br>
+            Each word will appear for a few seconds.<br>
+            After each set, there will be a short break.</p>
+            <p>Memorize the provided words to the best of your ability.</p>
+            <p>Press Start to begin the memorization sequence.</p>
+        `,
+      choices: ["Start"],
+      record_data: false,
+      post_trial_gap: 2000,
+    };
+    timeline.push(instructions);
+
+    //Include a specific MRI instruction reminder??
+
+    var fixation_duration = 100;
+    var encoding_trial_duration = 100;
+
+    var fixation = {
+      type: jsPsychHtmlKeyboardResponse,
+      stimulus: '<div style="font-size:60px;">+</div>',
+      choices: "NO_KEYS",
+      trial_duration: fixation_duration,
+      data: {
+        task: "break",
+        trial_duration: fixation_duration,
+      },
+    };
+
+    var lists = [
+      { name: "man", words: man },
+      { name: "spider", words: spider },
+      { name: "lion", words: lion },
+      { name: "cold", words: cold },
+      { name: "shirt", words: shirt },
+      { name: "black", words: black },
+      { name: "thief", words: thief },
+      { name: "fruit", words: fruit },
+    ];
+
+    // Randomize the order of lists
+    lists = jsPsych.randomization.shuffle(lists);
+
+    //Encoding phase
+    lists.forEach(function (list) {
+      var list_timeline = [];
+
+      // Add word presentation trials
+      list.words.forEach(function (word) {
+        list_timeline.push({
+          type: jsPsychHtmlKeyboardResponse,
+          stimulus: '<div style="font-size:60px;">' + word + "</div>",
+          choices: "NO_KEYS",
+          trial_duration: encoding_trial_duration,
+          data: {
+            task: "word_presentation",
+            list: list.name,
+            trial_duration: encoding_trial_duration,
+            word: word,
+          },
+        });
+      });
+
+      // Add a break trial after all words in the list
+      list_timeline.push(fixation);
+
+      // Add list timeline to the main timeline
+      timeline.push({
+        timeline: list_timeline,
+      });
+    });
+
+    // not sure if we're inserting a retention/distraction thingy, if so that goes in here !!
+
+    var recognition_instructions = {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+            <p>In the second part of this experiment you will be shown a sequence of words.<br>
+            For each presented word, please indicate whether it is a word you encountered during the first part of the experiment (press the button 'Old'), or whether this is a new word, not previously shown to you during this experiment (press the button 'New').<br>
+            There is no time limit for your decision.<br>
+            After each word, you will be asked to indicate how confident you are in your categorization of the previous word.<br>
+            Please indicate how confident you are of your decision from the provided scale.</p>
+            <p>Press Start to begin the second part of the experiment.</p>
+        `,
+      choices: ["Start"],
+      record_data: false,
+      post_trial_gap: 2000,
+    };
+    timeline.push(recognition_instructions);
+
+    // Function to start the experiment
+    function startRecognition(variables) {
+      var allWords = [];
+      var recognition_timeline = [];
+      var likert_scale = ["Very unsure", "Unsure", "Sure", "Very sure"];
+
+      var lists = [
+        { name: "man", words: man },
+        { name: "spider", words: spider },
+        { name: "lion", words: lion },
+        { name: "cold", words: cold },
+        { name: "shirt", words: shirt },
+        { name: "black", words: black },
+        { name: "thief", words: thief },
+        { name: "fruit", words: fruit },
+      ];
+
+      // Add predefined lists to wordsWithListNames and allWords
+      lists.forEach((list) => {
+        list.words.forEach((word) => {
+          allWords.push({ word: word, listName: list.name });
+        });
+        allWords.push({ word: list.name, listName: list.name });
+      });
+
+      // Add Excel words
+      Object.keys(variables).forEach((listName) => {
+        variables[listName].forEach((word) => {
+          allWords.push({ word: word, listName: listName });
+        });
+      });
+
+      // Shuffle the array
+      allWords = jsPsych.randomization.shuffle(allWords);
+
+      // Iterate through each word in allWords to create trials and their confidence ratings
+      allWords.forEach((item) => {
+        recognition_timeline.push({
+          type: jsPsychHtmlButtonResponse,
+          stimulus: `<p>${item.word}</p>`,
+          choices: ["Old", "New"],
+          data: {
+            listName: item.listName,
+            word: item.word,
+            trialType: "recognition",
+          },
+          on_finish: function (data) {
+            // Save the selected choice for later use
+            jsPsych.data.addDataToLastTrial({
+              selectedChoice: data.response,
+            });
+          },
+        });
+
+        recognition_timeline.push({
+          type: jsPsychSurveyLikert,
+          questions: [
+            {
+              prompt: "How confident are you in your previous categorization?",
+              labels: likert_scale,
+              required: true,
+              name: "Confidence",
+            },
+          ],
+          data: {
+            task: "confidence_rating",
+            listName: item.listName,
+            word: item.word,
+          },
+        });
+      });
+
+      // Add recognition timeline to the main timeline
+      timeline.push({
+        timeline: recognition_timeline,
+      });
+
+      var conclusion = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+              <p>Thank you for participating in the experiment.</p>
+              <p>Your responses have been recorded. Press the button below to end the experiment.</p>
+          `,
+        choices: ["Finish"],
+        record_data: false,
+      };
+
+      timeline.push(conclusion);
+    }
+
+    // Function to handle the completion of loading the Excel file
+    function handleExcelDataLoaded(variables) {
+      startRecognition(variables);
+      // After adding recognition trials, run the experiment
+      jsPsych.run(timeline);
+    }
+
+    // Load the Excel file to create the randomWords list
+    loadExcelFile("sampled_random_words.xlsx", handleExcelDataLoaded);
+
+    // Start the experiment
+    jsPsych.run(timeline);
+  </script>
+</html>
