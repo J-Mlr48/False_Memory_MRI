@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Demo Exp</title>
+    <title>DRM_fMRI_Experiment</title>
     <script src="jspsych/jspsych.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
@@ -162,7 +162,6 @@
     }
 
     function saveDataAsCSV(data, pseudonym) {
-      var folderName = "ExperimentResults";
       var baseFilename = `DRMfMRIFalseMemoryStudy_${pseudonym}`;
 
       // Create a unique identifier (timestamp)
@@ -170,14 +169,14 @@
       var filename = `${baseFilename}_${timestamp}.csv`;
 
       var blob = new Blob([data], { type: "text/csv" });
-      saveAs(blob, `${folderName}/${filename}`);
+      saveAs(blob, `${filename}`);
     }
 
     /*initialize jsPsych*/
     const jsPsych = initJsPsych({
       on_finish: function () {
         jsPsych.data.displayData(); //delete before run!!
-        // Convert data to CSV format and save it locally
+        // // Convert data to CSV format and save it locally
         // var csvData = jsPsych.data.get().csv();
         // saveDataAsCSV(csvData, pseud);
       },
@@ -199,7 +198,13 @@
       stimulus:
         "Welcome to the experiment. Press the Continue button to begin.",
       choices: ["Continue"],
-      record_data: false,
+      save_trial_parameters: {
+        rt: false,
+        stimulus: true,
+        response: false,
+        trial_type: false,
+        choices: false,
+      },
     };
     timeline.push(welcome);
 
@@ -220,6 +225,10 @@
       on_finish: function (data) {
         pseud = data.response.Pseudonym;
       },
+      save_trial_parameters: {
+        rt: false,
+        trial_type: false,
+      },
     };
     timeline.push(pseudonym);
 
@@ -235,6 +244,16 @@
       choices: ["Start"],
       record_data: false,
       post_trial_gap: 2000,
+      data: {
+        trialName: "introduction",
+      },
+      save_trial_parameters: {
+        rt: false,
+        stimulus: false,
+        response: false,
+        trial_type: false,
+        choices: false,
+      },
     };
     timeline.push(instructions);
 
@@ -249,8 +268,14 @@
       choices: "NO_KEYS",
       trial_duration: fixation_duration,
       data: {
-        task: "break",
+        task: "fixation",
         trial_duration: fixation_duration,
+      },
+      save_trial_parameters: {
+        rt: false,
+        stimulus: false,
+        response: false,
+        trial_type: false,
       },
     };
 
@@ -280,10 +305,16 @@
           choices: "NO_KEYS",
           trial_duration: encoding_trial_duration,
           data: {
-            task: "word_presentation",
+            task: "word_encoding",
             list: list.name,
             trial_duration: encoding_trial_duration,
             word: word,
+          },
+          save_trial_parameters: {
+            rt: false,
+            stimulus: false,
+            response: false,
+            trial_type: false,
           },
         });
       });
@@ -312,6 +343,15 @@
       choices: ["Start"],
       record_data: false,
       post_trial_gap: 2000,
+      data: {
+        trialName: "recognition_introduction",
+      },
+      save_trial_parameters: {
+        rt: false,
+        stimulus: false,
+        response: false,
+        trial_type: false,
+      },
     };
     timeline.push(recognition_instructions);
 
@@ -350,42 +390,98 @@
       // Shuffle the array
       allWords = jsPsych.randomization.shuffle(allWords);
 
-      // Iterate through each word in allWords to create trials and their confidence ratings
-      allWords.forEach((item) => {
-        recognition_timeline.push({
-          type: jsPsychHtmlButtonResponse,
-          stimulus: `<p>${item.word}</p>`,
-          choices: ["Old", "New"],
-          data: {
-            listName: item.listName,
-            word: item.word,
-            trialType: "recognition",
-          },
-          on_finish: function (data) {
-            // Save the selected choice for later use
-            jsPsych.data.addDataToLastTrial({
-              selectedChoice: data.response,
-            });
-          },
-        });
+      var debug = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `<p>man</p>`,
+        choices: ["Old", "New"], //for the (python) record: recognition = {0:'Old', 1:'New'}
+        data: {
+          task: "recognition",
+          listName: "man",
+          word: "man",
+        },
+        save_trial_parameters: {
+          stimulus: false,
+          trial_type: false,
+        },
+      };
 
-        recognition_timeline.push({
-          type: jsPsychSurveyLikert,
-          questions: [
-            {
-              prompt: "How confident are you in your previous categorization?",
-              labels: likert_scale,
-              required: true,
-              name: "Confidence",
-            },
-          ],
-          data: {
-            task: "confidence_rating",
-            listName: item.listName,
-            word: item.word,
+      var debug2 = {
+        type: jsPsychSurveyLikert,
+        questions: [
+          //for the (python) record: confidence = {0:"Very unsure", 1:"Unsure", 2:"Sure", 3:"Very sure"}
+          {
+            prompt: "How confident are you in your previous categorization?",
+            labels: likert_scale,
+            required: true,
+            name: "Confidence",
           },
-        });
-      });
+        ],
+        data: {
+          task: "confidence_rating",
+          listName: "man",
+          word: "man",
+        },
+        save_trial_parameters: {
+          question_order: false,
+          stimulus: false,
+          trial_type: false,
+        },
+      };
+      recognition_timeline.push(debug, debug2);
+
+      // // Iterate through each word in allWords to create trials and their confidence ratings
+      // allWords.forEach((item) => {
+      //   recognition_timeline.push({
+      //     type: jsPsychHtmlButtonResponse,
+      //     stimulus: `<p>${item.word}</p>`,
+      //     choices: ["Old", "New"], //for the (python) record: recognition = {0:'Old', 1:'New'}
+      //     data: {
+      //       task: "recognition",
+      //       listName: item.listName,
+      //       word: item.word,
+      //       word_typ: function(){ ##!! gotta check if/how this actually would have to be written
+      //         if item.listName == randomWords
+      //           'new'
+      //         if item.word == any lists name
+      //           'lure'
+      //         if item.word == any lists words
+      //           'studied'
+      //       }
+      //     },
+      //     save_trial_parameters: {
+      //       stimulus: false,
+      //       trial_type: false,
+      //     },
+      //     // on_finish: function (data) {
+      //     //   // Save the selected choice for later use
+      //     //   jsPsych.data.addDataToLastTrial({
+      //     //     selectedChoice: data.response,
+      //     //   });
+      //     // },
+      //   });
+
+      //   recognition_timeline.push({
+      //     type: jsPsychSurveyLikert,
+      //     questions: [ //for the (python) record: confidence = {0:"Very unsure", 1:"Unsure", 2:"Sure", 3:"Very sure"}
+      //       {
+      //         prompt: "How confident are you in your previous categorization?",
+      //         labels: likert_scale,
+      //         required: true,
+      //         name: "Confidence",
+      //       },
+      //     ],
+      //     data: {
+      //       task: "confidence_rating",
+      //       listName: item.listName,
+      //       word: item.word,
+      //     },
+      //     save_trial_parameters: {
+      //       question_order: false,
+      //       stimulus: false,
+      //       trial_type: false,
+      //     },
+      //   });
+      // });
 
       // Add recognition timeline to the main timeline
       timeline.push({
@@ -400,6 +496,15 @@
           `,
         choices: ["Finish"],
         record_data: false,
+        data: {
+          trialName: "conclusion",
+        },
+        save_trial_parameters: {
+          rt: false,
+          stimulus: false,
+          response: false,
+          trial_type: false,
+        },
       };
 
       timeline.push(conclusion);
